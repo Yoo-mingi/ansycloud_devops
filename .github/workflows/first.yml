@@ -1,0 +1,7 @@
+name: First Workflow
+on: push
+jobs: 
+  echo:
+    runs-on: ubuntu-lotest
+    steps:
+      - run: echo 'Hello, Github Actions!'
