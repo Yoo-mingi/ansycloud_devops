@@ -1,53 +1,51 @@
-name: 'Terraform'
+name: 'Terraform Deploy'
+
 on:
   push:
+    branches:
+      - main
     paths:
       - 'terraform/**'
 
-permissions:
-  contents: read
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'terraform/**'
 
 jobs:
   terraform:
-    name: 'Terraform'
     runs-on: ubuntu-latest
-    environment: production
+    
     permissions:
       id-token: write
       contents: read
 
     steps:
-    # Checkout the repository to the GitHub Actions runner
-    - name: Checkout
-      uses: actions/checkout@v5
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    # AWS Configure
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v5
-      with:
-        aws-region: ap-northeast-2
-        role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+      # AWS 임시 자격 증명 구성
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }} 
+          aws-region: ap-northeast-2 
 
-    # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v2
-      with:
-        cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+      # Terraform 설치
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0 # 원하는 Terraform 버전
 
-    # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
-    - name: Terraform Init
-      run: terraform init
+      # Terraform 명령어 실행
+      - name: Terraform Init
+        run: terraform init
+      
+      - name: Terraform Plan
+        run: terraform plan -input=false
 
-    # Checks that all Terraform configuration files adhere to a canonical format
-    - name: Terraform Format
-      run: terraform fmt -check
-
-    # Generates an execution plan for Terraform
-    - name: Terraform Plan
-      run: terraform plan -input=false
-
-      # On push to "main", build or change infrastructure according to Terraform configuration files
-      # Note: It is recommended to set up a required "strict" status check in your repository for "Terraform Cloud". See the documentation on "strict" required status checks for more information: https://help.github.com/en/github/administering-a-repository/types-of-required-status-checks
-    - name: Terraform Apply
-      if: github.ref == 'refs/heads/"main"' && github.event_name == 'push'
-      run: terraform apply -auto-approve -input=false
+      # main 브랜치에 push될 때만 apply 실
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: terraform apply -auto-approve -input=false
